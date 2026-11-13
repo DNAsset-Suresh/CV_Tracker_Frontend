@@ -1,0 +1,26 @@
+{
+  "name": "talentflow-ai-workspace",
+  "version": "1.0.0",
+  "description": "TalentFlow AI - Resume Screening & Recruitment Management System (MERN Stack)",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test"
+  },
+  "keywords": [
+    "talentflow",
+    "recruitment",
+    "resume-screening",
+    "ai",
+    "mern",
+    "openai",
+    "mongodb"
+  ],
+  "author": "TalentFlow Engineering Team",
+  "license": "UNLICENSED"
+}
+
