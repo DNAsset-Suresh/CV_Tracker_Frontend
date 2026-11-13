@@ -1,11 +1,16 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { config } from '../config/index.js';
 
-// Ensure temporary storage directory exists
-if (!fs.existsSync(config.storage.tempDir)) {
-  fs.mkdirSync(config.storage.tempDir, { recursive: true });
+// Ensure temporary storage directory exists safely (fallback to os.tmpdir() on serverless read-only filesystem)
+try {
+  if (!fs.existsSync(config.storage.tempDir)) {
+    fs.mkdirSync(config.storage.tempDir, { recursive: true });
+  }
+} catch (e) {
+  config.storage.tempDir = os.tmpdir();
 }
 
 const storage = multer.diskStorage({

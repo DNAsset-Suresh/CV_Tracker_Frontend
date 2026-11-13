@@ -1,17 +1,31 @@
 import mongoose from 'mongoose';
 import { config } from './index.js';
 
+let cached = (global as any).mongoose;
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
+
 export const connectDB = async (): Promise<typeof mongoose | null> => {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 8000,
+      autoIndex: config.env !== 'production',
+    }).then((m) => m);
+  }
+
   try {
-    const conn = await mongoose.connect(config.mongoUri, {
-      serverSelectionTimeoutMS: 5000,
-      autoIndex: true,
-    });
-    console.log(`[Database] MongoDB Connected: ${conn.connection.host}`);
-    return conn;
+    cached.conn = await cached.promise;
+    console.log(`[Database] MongoDB Connected: ${cached.conn.connection.host}`);
+    return cached.conn;
   } catch (error: any) {
+    cached.promise = null;
     console.error(`[Database Error] MongoDB connection failure: ${error.message}`);
-    console.warn(`[Database Warning] Running in offline-resilient mode. Database operations will attempt to reconnect.`);
+    console.warn(`[Database Warning] Running in offline-resilient mode. Check MONGODB_URI and IP whitelist.`);
     return null;
   }
 };

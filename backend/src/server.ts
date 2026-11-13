@@ -87,6 +87,16 @@ app.use('/api', apiLimiter);
 // API Routes
 app.use('/api', apiRoutes);
 
+// Ensure database connection for requests (especially in serverless environments)
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    // Non-blocking in offline-resilient mode
+  }
+  next();
+});
+
 // Root greeting
 app.get('/', (_req, res) => {
   res.json({
@@ -116,7 +126,10 @@ const startServer = async () => {
   });
 };
 
-startServer();
+// Only call server.listen in standalone mode (not in Vercel serverless execution)
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
@@ -127,5 +140,6 @@ process.on('SIGINT', async () => {
   });
 });
 
+export default app;
 export { app, server, io };
 

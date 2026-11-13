@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 
 dotenv.config();
 
@@ -17,7 +18,9 @@ export const config = {
     isConfigured: Boolean(process.env.REDIS_URL),
   },
   storage: {
-    tempDir: path.resolve(process.cwd(), process.env.TEMP_UPLOAD_DIR || './uploads/temp'),
+    tempDir: process.env.VERCEL
+      ? path.join(os.tmpdir(), 'talentflow_temp')
+      : path.resolve(process.cwd(), process.env.TEMP_UPLOAD_DIR || './uploads/temp'),
     maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '15', 10),
   },
 };
