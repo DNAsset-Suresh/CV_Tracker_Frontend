@@ -9,7 +9,7 @@ import { Candidate } from '../models/Candidate.js';
 import { parserService } from '../services/resume/parserService.js';
 import { aiService } from '../services/ai/aiService.js';
 import { storageService } from '../services/storage/storageService.js';
-import { notificationService, getSocketIOInstance } from '../services/notification/notificationService.js';
+import { notificationService } from '../services/notification/notificationService.js';
 
 export interface ResumeJobData {
   resumeId: string;
@@ -300,17 +300,11 @@ class ResumeProcessingManager {
     progress: number = 0,
     error?: string
   ) {
-    const io = getSocketIOInstance();
-    if (io) {
-      io.emit('resume_progress', {
-        resumeId,
-        batchId,
-        status,
-        progress,
-        error,
-        timestamp: new Date(),
-      });
-    }
+    logger.debug(
+      `[Resume Progress] ${resumeId} (batch: ${batchId || 'single'}): ${status} ${progress}% ${
+        error ? `(Error: ${error})` : ''
+      }`
+    );
   }
 }
 

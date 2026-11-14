@@ -1,55 +1,18 @@
 import express from 'express';
-import http from 'http';
-import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import mongoose from 'mongoose';
 import { config } from './config/index.js';
-import { connectDB } from './config/db.js';
+import { connectDB, maskMongoCredentials } from './config/db.js';
 import { logger } from './utils/logger.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { setSocketIOInstance } from './services/notification/notificationService.js';
 import apiRoutes from './routes/index.js';
 
 const app = express();
-const server = http.createServer(app);
 
-// Initialize Socket.IO
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true,
-  },
-});
-
-setSocketIOInstance(io);
-
-// Socket.IO event handlers
-io.on('connection', (socket) => {
-  logger.info(`[Socket.IO] Client connected: ${socket.id}`);
-
-  socket.on('join_user', (userId: string) => {
-    if (userId) {
-      socket.join(userId);
-      logger.debug(`[Socket.IO] Socket ${socket.id} joined user room: ${userId}`);
-    }
-  });
-
-  socket.on('join_role', (role: string) => {
-    if (role) {
-      socket.join(role);
-      logger.debug(`[Socket.IO] Socket ${socket.id} joined role room: ${role}`);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    logger.info(`[Socket.IO] Client disconnected: ${socket.id}`);
-  });
-});
-
-// Middleware
+// Security and CORS middleware
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -72,8 +35,8 @@ if (config.env !== 'test') {
 
 // Rate Limiter
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -84,38 +47,57 @@ const apiLimiter = rateLimit({
 
 app.use('/api', apiLimiter);
 
-// API Routes
-app.use('/api', apiRoutes);
-
-// Ensure database connection for requests (especially in serverless environments)
-app.use(async (_req, _res, next) => {
-  try {
-    await connectDB();
-  } catch (err) {
-    // Non-blocking in offline-resilient mode
-  }
-  next();
-});
-
-// Root greeting
+// Root greeting & status (available even if DB is connecting)
 app.get('/', (_req, res) => {
   res.json({
     application: 'TalentFlow AI',
     status: 'Running',
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     version: '1.0.0',
     documentation: '/docs',
     apiBase: '/api',
   });
 });
 
+// Database Readiness Gate - Awaits connectDB() BEFORE mounting login and protected API routes
+app.use('/api', async (_req, res, next) => {
+  try {
+    const conn = await connectDB();
+    if (!conn || mongoose.connection.readyState !== 1) {
+      logger.error('[Database Error] Service Unavailable: MongoDB connection is not active.');
+      res.status(503).json({
+        success: false,
+        message: 'Database service is temporarily unavailable. Please verify MongoDB Atlas connection and IP whitelist.',
+      });
+      return;
+    }
+    next();
+  } catch (error: any) {
+    const safeError = maskMongoCredentials(error?.message || String(error));
+    logger.error(`[Database Error] Connection exception: ${safeError}`);
+    res.status(503).json({
+      success: false,
+      message: 'Database connection failed. Please ensure MongoDB Atlas credentials and IP access are valid.',
+    });
+  }
+});
+
+// Mount protected API and Auth routes
+app.use('/api', apiRoutes);
+
 // Centralized Error Handler
 app.use(errorHandler);
 
-// Database Connection & Server Startup
+// Database Connection & Server Startup for standalone execution
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
+  } catch (err: any) {
+    const safeMsg = maskMongoCredentials(err?.message || String(err));
+    logger.error(`[Database Startup Error] ${safeMsg}`);
+  }
 
-  server.listen(config.port, () => {
+  app.listen(config.port, () => {
     logger.info(`=======================================================`);
     logger.info(`  TalentFlow AI Recruitment Engine is LIVE!            `);
     logger.info(`  Port: ${config.port}                                 `);
@@ -126,7 +108,7 @@ const startServer = async () => {
   });
 };
 
-// Only call server.listen in standalone mode (not in Vercel serverless execution)
+// Standalone execution check (not in Vercel serverless environment)
 if (!process.env.VERCEL) {
   startServer();
 }
@@ -134,12 +116,8 @@ if (!process.env.VERCEL) {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   logger.info('[Process] SIGINT received. Shutting down gracefully...');
-  server.close(() => {
-    logger.info('[Process] HTTP server closed.');
-    process.exit(0);
-  });
+  process.exit(0);
 });
 
 export default app;
-export { app, server, io };
-
+export { app };

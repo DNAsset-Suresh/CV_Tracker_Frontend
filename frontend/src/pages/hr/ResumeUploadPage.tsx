@@ -14,12 +14,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { resumeService } from '../../services/resumeService';
-import { useSocket } from '../../context/SocketContext';
 import { StatusBadge } from '../../components/common/Badge';
 
 export const ResumeUploadPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeResumeJobs } = useSocket();
 
   const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
   const [singleFile, setSingleFile] = useState<File | null>(null);
@@ -506,8 +504,7 @@ export const ResumeUploadPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {batchStatus.resumes?.map((resItem: any) => {
-                      const liveJob = activeResumeJobs[resItem._id];
-                      const currentStatus = liveJob?.status || resItem.processingStatus;
+                      const currentStatus = resItem.processingStatus;
 
                       return (
                         <tr key={resItem._id} className="hover:bg-slate-50/80">

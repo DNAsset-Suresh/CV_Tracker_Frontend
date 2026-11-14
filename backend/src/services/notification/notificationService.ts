@@ -1,16 +1,6 @@
-import { Server as SocketServer } from 'socket.io';
 import { Notification, INotification, NotificationType } from '../../models/Notification.js';
 import { logger } from '../../utils/logger.js';
 import mongoose from 'mongoose';
-
-let ioInstance: SocketServer | null = null;
-
-export const setSocketIOInstance = (io: SocketServer) => {
-  ioInstance = io;
-  logger.info('[Socket.IO] Notification service bound to Socket server.');
-};
-
-export const getSocketIOInstance = (): SocketServer | null => ioInstance;
 
 export class NotificationService {
   async sendNotification({
@@ -42,17 +32,6 @@ export class NotificationService {
         readStatus: false,
       });
 
-      // Emit real-time notification to user's room if socket server is active
-      if (ioInstance) {
-        ioInstance.to(userId.toString()).emit('new_notification', notification);
-        // Also broadcast global event for dashboard stats updates
-        ioInstance.emit('recruitment_event', {
-          type: notificationType,
-          entityId,
-          title,
-        });
-      }
-
       return notification;
     } catch (err: any) {
       logger.error(`[Notification Error] Could not create notification: ${err.message}`);
@@ -60,12 +39,9 @@ export class NotificationService {
     }
   }
 
-  async broadcastToRole(role: string, title: string, message: string, meta?: any) {
-    if (ioInstance) {
-      ioInstance.to(role).emit('broadcast_alert', { title, message, meta });
-    }
+  async broadcastToRole(_role: string, _title: string, _message: string, _meta?: any) {
+    // Role-based notification broadcast via REST
   }
 }
 
 export const notificationService = new NotificationService();
-

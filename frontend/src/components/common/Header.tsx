@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Search, User as UserIcon, LogOut, CheckCircle2, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
 import { notificationService } from '../../services/notificationService';
 import { ClassificationBadge } from './Badge';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
-  const { isConnected } = useSocket();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -76,19 +74,6 @@ export const Header: React.FC = () => {
 
       {/* Right side icons */}
       <div className="flex items-center gap-4">
-        {/* Real-time Socket Indicator */}
-        <div
-          title={isConnected ? 'Live sync connected' : 'Connecting to live service...'}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-600"
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
-            }`}
-          />
-          <span className="hidden sm:inline">{isConnected ? 'Live' : 'Connecting'}</span>
-        </div>
-
         {/* Notification Bell */}
         <div className="relative" ref={notifRef}>
           <button

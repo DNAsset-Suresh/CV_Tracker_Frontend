@@ -22,12 +22,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
 import { notificationService } from '../../services/notificationService';
 
 export const TopNavbar: React.FC = () => {
   const { user, logout } = useAuth();
-  const { isConnected } = useSocket();
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -175,21 +173,8 @@ export const TopNavbar: React.FC = () => {
             })}
           </div>
 
-          {/* RIGHT: Notifications, Live Status, Profile */}
+          {/* RIGHT: Notifications, Profile */}
           <div className="flex items-center gap-2.5 sm:gap-3.5">
-            {/* Live Socket Status */}
-            <div
-              title={isConnected ? 'Live updates active' : 'Connecting live sync...'}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-medium text-slate-600"
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
-                }`}
-              />
-              <span>{isConnected ? 'Live' : 'Syncing'}</span>
-            </div>
-
             {/* Notification Bell Dropdown */}
             <div className="relative" ref={notifRef}>
               <button
